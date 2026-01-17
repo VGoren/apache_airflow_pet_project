@@ -306,6 +306,22 @@ services:
     volumes:
       - ${AIRFLOW_PROJ_DIR:-.}:/sources
 
+  airflow-variables:    
+    <<: *airflow-common
+    entrypoint: /bin/bash 
+    command: 
+      - -c
+      - |
+        echo 'Ожидание готовности базы данных...'
+        airflow variables import /opt/airflow/airflow-variables.json
+        echo 'Переменные успешно импортированы!'
+        exec /entrypoint airflow version
+    volumes:
+      - ./airflow-variables.json:/opt/airflow/airflow-variables.json
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
   airflow-cli:
     <<: *airflow-common
     profiles:

@@ -145,15 +145,15 @@ with DAG(
 ) as dag:
     dag.doc_md = LONG_DESCRIPTION
 
-    (
-        EmptyOperator     (task_id         = "start")                                                                      >> 
-        ExternalTaskSensor(task_id         = "sensor_on_raw_layer", 
-                           external_dag_id = "raw_from_api_to_s3", allowed_states  = ["success"], 
-                                                                   mode = "reschedule",
-                                                                   timeout         = 360000, # длительность работы сенсора 
-                                                                   poke_interval   = 60,     # частота проверки
-                          )                                                                                                >>
-        PythonOperator    (task_id         = "get_and_transfer_raw_data_to_ods_pg",
-                           python_callable =  get_and_transfer_raw_data_to_ods_pg)                                         >> 
-        EmptyOperator     (task_id         = "end")
-    )
+(
+    EmptyOperator     (task_id         = "start")                                                                      >> 
+    ExternalTaskSensor(task_id         = "sensor_on_raw_layer", 
+                        external_dag_id = "raw_from_api_to_s3", allowed_states  = ["success"], 
+                                                                mode = "reschedule",
+                                                                timeout         = 360000, # длительность работы сенсора 
+                                                                poke_interval   = 60,     # частота проверки
+                        )                                                                                                >>
+    PythonOperator    (task_id         = "get_and_transfer_raw_data_to_ods_pg",
+                        python_callable =  get_and_transfer_raw_data_to_ods_pg)                                         >> 
+    EmptyOperator     (task_id         = "end")
+)

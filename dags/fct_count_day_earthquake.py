@@ -68,19 +68,19 @@ with DAG(
                                     """
     drop_stg_table_after_sql     = f"""DROP TABLE IF EXISTS stg."tmp_{TARGET_TABLE}_{{{{ data_interval_start.format('YYYY-MM-DD') }}}}"
                                     """
-
-    (
-        EmptyOperator          (task_id = "start")                                                                                                 >>
-        ExternalTaskSensor     (task_id = "sensor_on_raw_layer", external_dag_id = "raw_from_s3_to_pg", 
-                                                                 allowed_states  = ["success"], 
-                                                                 mode            = "reschedule", 
-                                                                 timeout         = 360000, # длительность работы сенсора
-                                                                 poke_interval   = 60,     # частота проверки
-                                )                                                                                                                  >>
-        SQLExecuteQueryOperator(task_id = "drop_stg_table_before",    conn_id = PG_CONNECT, autocommit = True, sql = drop_stg_table_before_sql)    >>
-        SQLExecuteQueryOperator(task_id = "create_stg_table",         conn_id = PG_CONNECT, autocommit = True, sql = create_stg_table_sql)         >>
-        SQLExecuteQueryOperator(task_id = "drop_from_target_table",   conn_id = PG_CONNECT, autocommit = True, sql = drop_from_target_table_sql)   >>
-        SQLExecuteQueryOperator(task_id = "insert_into_target_table", conn_id = PG_CONNECT, autocommit = True, sql = insert_into_target_table_sql) >>
-        SQLExecuteQueryOperator(task_id = "drop_stg_table_after",     conn_id = PG_CONNECT, autocommit = True, sql = drop_stg_table_after_sql)     >>
-        EmptyOperator          (task_id = "end")
-    )
+    
+(
+    EmptyOperator          (task_id = "start")                                                                                                 >>
+    ExternalTaskSensor     (task_id = "sensor_on_raw_layer", external_dag_id = "raw_from_s3_to_pg", 
+                                                                allowed_states  = ["success"], 
+                                                                mode            = "reschedule", 
+                                                                timeout         = 360000, # длительность работы сенсора
+                                                                poke_interval   = 60,     # частота проверки
+                            )                                                                                                                  >>
+    SQLExecuteQueryOperator(task_id = "drop_stg_table_before",    conn_id = PG_CONNECT, autocommit = True, sql = drop_stg_table_before_sql)    >>
+    SQLExecuteQueryOperator(task_id = "create_stg_table",         conn_id = PG_CONNECT, autocommit = True, sql = create_stg_table_sql)         >>
+    SQLExecuteQueryOperator(task_id = "drop_from_target_table",   conn_id = PG_CONNECT, autocommit = True, sql = drop_from_target_table_sql)   >>
+    SQLExecuteQueryOperator(task_id = "insert_into_target_table", conn_id = PG_CONNECT, autocommit = True, sql = insert_into_target_table_sql) >>
+    SQLExecuteQueryOperator(task_id = "drop_stg_table_after",     conn_id = PG_CONNECT, autocommit = True, sql = drop_stg_table_after_sql)     >>
+    EmptyOperator          (task_id = "end")
+)

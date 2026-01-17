@@ -97,9 +97,9 @@ with DAG(
 ) as dag:
     dag.doc_md = LONG_DESCRIPTION
 
-    (
-        EmptyOperator (task_id         = "start")                           >> 
-        PythonOperator(task_id         = "get_and_transfer_api_data_to_s3",
-                       python_callable =  get_and_transfer_api_data_to_s3)  >> 
-        EmptyOperator (task_id         = "end")
-    )
+(
+    EmptyOperator (task_id         = "start")                           >> 
+    PythonOperator(task_id         = "get_and_transfer_api_data_to_s3",
+                    python_callable =  get_and_transfer_api_data_to_s3)  >> 
+    EmptyOperator (task_id         = "end")
+)
