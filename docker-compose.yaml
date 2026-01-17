@@ -94,7 +94,7 @@ services:
       POSTGRES_DB: postgres
     restart: always
     volumes:
-      - ./init-scripts:/docker-entrypoint-initdb.d
+      - ./init_scripts:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
   minio:
@@ -121,14 +121,20 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    environment:
+      - MY_ACCESS_KEY=${MY_ACCESS_KEY}
+      - MY_SECRET_KEY=${MY_SECRET_KEY}
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      until (/usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin); do 
+        echo 'Waiting for MinIO...'; sleep 2; 
+      done;
+      /usr/bin/mc admin user svcacct add --access-key $$MY_ACCESS_KEY --secret-key $$MY_SECRET_KEY myminio minioadmin;
+      echo 'Access Key successfully added';
       /usr/bin/mc mb myminio/main || true;
       /usr/bin/mc anonymous set public myminio/main;
       exit 0;
       "
-
   metabase:
     build:
       context: .
