@@ -75,6 +75,81 @@ END;
 $sql$ 
 LANGUAGE plpgsql;
 
+/*
+SELECT * FROM dm.get_pages_spearman_corr
+(
+    /*report_subperiod = */'week',
+    /*report_period    = */'quarter',
+    /*PROJECT_NAME_1   = */'en.wikipedia.org', /*PAGE_NAME_1 = */'Santa_Claus',
+    /*PROJECT_NAME_2   = */'en.wikipedia.org', /*PAGE_NAME_2 = */'Coca-Cola',
+    /*start_date       = */'01.01.2020',
+    /*end_date         = */'01.01.2026'
+)
+*/
+CREATE OR REPLACE FUNCTION dm.get_pages_spearman_corr
+(
+    report_subperiod varchar,
+    report_period    varchar,
+    PROJECT_NAME_1   varchar, PAGE_NAME_1 varchar,
+    PROJECT_NAME_2   varchar, PAGE_NAME_2 varchar,
+    start_date       varchar,
+    end_date         varchar
+)
+RETURNS TABLE 
+(
+    period               timestamptz, 
+    spearman_correlation float8
+) 
+AS $sql$
+DECLARE 
+    sql_query text;
+BEGIN
+    sql_query := $$
+                 WITH 
+                 paired_data AS (
+                     SELECT DATE_TRUNC('$$||report_subperiod||$$', a.timestamp) AS report_subperiod,
+                            DATE_TRUNC('$$||report_period||$$',    a.timestamp) AS report_period,
+                            a.all_access_views                 					AS val_a,
+                            b.all_access_views                 					AS val_b
+                     FROM      ods.fct_views a
+                     INNER JOIN ods.pages     apage ON a.page_id        = apage.id
+                     INNER JOIN ods.projects  aproj ON apage.project_id = aproj.id
+                     INNER JOIN ods.fct_views b     ON a.timestamp      = b.timestamp
+                     INNER JOIN ods.pages     bpage ON b.page_id        = bpage.id
+                     INNER JOIN ods.projects  bproj ON bpage.project_id = bproj.id
+                     WHERE aproj.project_name = '$$||PROJECT_NAME_1||$$' AND apage.page_name = '$$||PAGE_NAME_1||$$'
+                       AND bproj.project_name = '$$||PROJECT_NAME_2||$$' AND bpage.page_name = '$$||PAGE_NAME_2||$$'
+                       AND a.timestamp BETWEEN '$$||start_date||$$' 
+                                           AND '$$||end_date||$$'
+                 ),
+                 paired_grouped_data AS 
+                 (
+                     SELECT report_subperiod,
+                            report_period,
+                            SUM(val_a) AS val_a,
+                            SUM(val_b) AS val_b
+                     FROM paired_data
+                     GROUP BY report_period, report_subperiod
+                 ),
+                 ranked_data AS (
+                     SELECT report_period,
+                            RANK() OVER (PARTITION BY report_period ORDER BY val_a) AS rank_a,
+                            RANK() OVER (PARTITION BY report_period ORDER BY val_b) AS rank_b
+                     FROM paired_grouped_data
+                 )
+                 SELECT report_period,
+                        CORR(rank_a, rank_b) AS spearman_correlation
+                 FROM ranked_data
+                 GROUP BY report_period
+                 ORDER BY report_period
+                 $$;
+
+    --RAISE NOTICE '%', sql_query;
+
+    RETURN QUERY EXECUTE sql_query;
+END;
+$sql$ 
+LANGUAGE plpgsql;
 
 
 
